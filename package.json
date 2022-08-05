@@ -34,8 +34,34 @@
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
-     
-    ]
+      {
+        "command": "git.autocommit",
+        "title": "Auto Commit",
+        "icon": {
+          "dark": "dark.png",
+          "light": "light.png"
+        }
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "git.autocommit",
+          "when": "scmProvider == git",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Auto Git Commit",
+      "properties": {
+        "git.autocommit.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Auto Git Commit"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "yarn run compile",

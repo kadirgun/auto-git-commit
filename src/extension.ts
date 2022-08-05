@@ -5,6 +5,8 @@ import api from './api';
 import path = require('path');
 import { Status, Repository, API } from './git.d';
 
+var git: API;
+
 interface Commit {
 	type: string,
 	files: File[],
@@ -32,9 +34,8 @@ preps.set('deleted', 'from');
 preps.set('modified', 'in');
 preps.set('renamed', 'in');
 
-function handleRepositoryChanges(repository: Repository) {
-	repository.state.onDidChange(() => {
-		let stagedChanges = repository.state.indexChanges;
+function writeAutoCommit(repository: Repository){
+	let stagedChanges = repository.state.indexChanges;
 		let unStagedChanges = repository.state.workingTreeChanges;
 		let root = vscode.workspace.workspaceFolders?.[0];
 	
@@ -76,9 +77,9 @@ function handleRepositoryChanges(repository: Repository) {
 			let commit = commits.find(commit => commit.count > 0);
 			if(!commit) { return; }
 			let samePath = commit.files.every(file => file.path === commit?.files[0].path);
-			if (changes.length > 3 && !samePath) {
+			if (changes.length >= 3 && !samePath) {
 				messages.push(`${commit.type} ${commit.count} files`);
-			}else if(changes.length > 3 && samePath){
+			}else if(changes.length >= 3 && samePath){
 				messages.push(`${commit.type} ${commit.count} files ${preps.get(commit.type)} ${commit.files[0].path}`);
 			}else if(changes.length === 2 && !samePath){
 				messages.push(`${commit.type} ${commit.files.map(file => file.name).join(' and ')}`);
@@ -97,18 +98,33 @@ function handleRepositoryChanges(repository: Repository) {
 		}
 
 		repository.inputBox.value = messages.join(' ');
+}
+
+function listenRepositoryChanges(repository: Repository) {
+	repository.state.onDidChange(() => {
+		let enabled = vscode.workspace.getConfiguration().get('git.autocommit.enabled');
+		if(!enabled) {return;}
+		writeAutoCommit(repository);
+	});
+}
+
+function autoCommit(){
+	git.repositories.forEach(repository => {
+		writeAutoCommit(repository);
 	});
 }
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	let gitApiInterval = setInterval(() => {
-		let git = api();
-		if (!git) { return; }
+	vscode.commands.registerCommand('git.autocommit', autoCommit);
 
+	let gitApiInterval = setInterval(() => {
+		let connect = api();
+		if (!connect) { return; }
+		git = connect;
 		git.repositories.forEach(repository => {
-			handleRepositoryChanges(repository);
+			listenRepositoryChanges(repository);
 		});
 
 		clearInterval(gitApiInterval);
