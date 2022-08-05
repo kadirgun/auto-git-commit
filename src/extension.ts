@@ -36,7 +36,8 @@ function handleRepositoryChanges(repository: Repository) {
 	repository.state.onDidChange(() => {
 		let stagedChanges = repository.state.indexChanges;
 		let unStagedChanges = repository.state.workingTreeChanges;
-
+		let root = vscode.workspace.workspaceFolders?.[0];
+	
 		let changes = stagedChanges.length > 0 ? stagedChanges : unStagedChanges;
 
 		if (changes.length === 0) {
@@ -54,6 +55,7 @@ function handleRepositoryChanges(repository: Repository) {
 		changes.forEach(change => {
 			let fileName = path.basename(change.uri.path);
 			let filePath = path.basename(path.dirname(change.uri.path));
+			if(filePath === root?.name){ filePath = '.'; }
 			let prefix: string = prefiexes[change.status];
 			let commit = commits.find((commit: Commit) => commit.type === prefix);
 			if (!commit) { return; }
@@ -69,8 +71,7 @@ function handleRepositoryChanges(repository: Repository) {
 		});
 
 		let messages: string[] = [];
-		console.log(groups);
-
+		
 		if(groups === 1){
 			let commit = commits.find(commit => commit.count > 0);
 			if(!commit) { return; }
@@ -102,7 +103,6 @@ function handleRepositoryChanges(repository: Repository) {
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	console.log('Congratulations, your extension "git-auto-commit" is now active!');
 	let gitApiInterval = setInterval(() => {
 		let git = api();
 		if (!git) { return; }
@@ -111,11 +111,8 @@ export function activate(context: vscode.ExtensionContext) {
 			handleRepositoryChanges(repository);
 		});
 
-		git.repositories[0].ui.onDidChange(console.log);
-
 		clearInterval(gitApiInterval);
 	}, 100);
-	
 }
 
 // this method is called when your extension is deactivated
