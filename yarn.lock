@@ -95,7 +95,7 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-16.11.47.tgz#efa9e3e0f72e7aa6a138055dace7437a83d9f91c"
   integrity sha512-fpP+jk2zJ4VW66+wAMFoBJlx1bxmBKx4DUFf68UHgdGCOuyUTDlLWqsaNPJh7xhNDykyJ9eIzAygilP/4WoN8g==
 
-"@types/vscode@^1.70.0":
+"@types/vscode@^1.69.1":
   version "1.69.1"
   resolved "https://registry.yarnpkg.com/@types/vscode/-/vscode-1.69.1.tgz#fe02a9448510f480a20257e37c05301d63172806"
   integrity sha512-YZ77g3u9S9Xw3dwAgRgNAwnKNS3nPlhSu3XKOIYQzCcItUrZovfJUlf/29wjON2VZvHGuYQnhKuJUP15ccpVIQ==
