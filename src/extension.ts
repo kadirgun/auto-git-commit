@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import { SourceControlInputBox } from "vscode";
 import api from "./api";
 import path = require("path");
-import { Status, Repository, API } from "./git.d";
+import { Status, Repository as GitRepository, API } from "./git.d";
 
 var git: API;
 
@@ -17,6 +17,26 @@ interface Commit {
 interface File {
   name: string;
   path: string;
+}
+
+class InputBox {
+  _onDidChangeValue = new vscode.EventEmitter<string>();
+  onDidChangeValue: vscode.Event<string> = this._onDidChangeValue.event;
+  _value: string = '';
+  original: any;
+  set value(value: string) {
+    if(value !== this._value){
+      this.editing = true;
+      this._onDidChangeValue.fire(this._value);
+    }
+    this._value = value;
+  }
+
+  get value(): string {
+    return this._value;
+  }
+
+  editing: boolean = false;
 }
 
 const prefiexes: string[] = [];
@@ -35,15 +55,28 @@ preps.set("deleted", "from");
 preps.set("modified", "in");
 preps.set("renamed", "in");
 
+interface Repository {
+  orginal: GitRepository;
+  message: string;
+}
+
+function isAvailable(repository: Repository): boolean {
+  if(repository.message === repository.orginal.inputBox.value) {return true;}
+  if(repository.orginal.inputBox.value === '') {return true;}
+
+  return false;
+}
+
 function writeAutoCommit(repository: Repository) {
-  let stagedChanges = repository.state.indexChanges;
-  let unStagedChanges = repository.state.workingTreeChanges;
+  if(!isAvailable(repository)) {return;}
+  let stagedChanges = repository.orginal.state.indexChanges;
+  let unStagedChanges = repository.orginal.state.workingTreeChanges;
   let root = vscode.workspace.workspaceFolders?.[0];
 
   let changes = stagedChanges.length > 0 ? stagedChanges : unStagedChanges;
 
   if (changes.length === 0) {
-    repository.inputBox.value = "";
+    repository.orginal.inputBox.value = "";
     return;
   }
 
@@ -122,11 +155,14 @@ function writeAutoCommit(repository: Repository) {
     messages.push(`changed ${changes.length} files`);
   }
 
-  repository.inputBox.value = messages.join(" ");
+  let message = messages.join(" ");
+  repository.orginal.inputBox.value = message;
+  repository.message = message;
 }
 
 function listenRepositoryChanges(repository: Repository) {
-  repository.state.onDidChange(() => {
+  repository.orginal.inputBox.value = '';
+  repository.orginal.state.onDidChange(() => {
     let enabled = vscode.workspace
       .getConfiguration()
       .get("git.autocommit.enabled");
@@ -138,7 +174,12 @@ function listenRepositoryChanges(repository: Repository) {
 }
 
 function autoCommit() {
-  git.repositories.forEach((repository) => {
+  git.repositories.forEach((orginal) => {
+    let repository: Repository = {
+      orginal: orginal,
+      message: ''
+    };
+    repository.orginal.inputBox.value = '';
     writeAutoCommit(repository);
   });
 }
@@ -147,18 +188,27 @@ function autoCommit() {
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
   vscode.commands.registerCommand("git.autocommit", autoCommit);
-
   let gitApiInterval = setInterval(() => {
     let connect = api();
     if (!connect) {
       return;
     }
     git = connect;
-    git.repositories.forEach((repository) => {
+    git.repositories.forEach((orginal) => {
+      let repository: Repository = {
+        orginal: orginal,
+        message: ''
+      };
       listenRepositoryChanges(repository);
     });
-
-    git.onDidOpenRepository(listenRepositoryChanges);
+    
+    git.onDidOpenRepository((orginal) => {
+      let repository: Repository = {
+        orginal: orginal,
+        message: ''
+      };
+      listenRepositoryChanges(repository);
+    });
 
     clearInterval(gitApiInterval);
   }, 100);
