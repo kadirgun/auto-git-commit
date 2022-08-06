@@ -2,7 +2,7 @@
   "name": "auto-git-commit",
   "displayName": "Auto Git Commit",
   "description": "A vscode extension to auto git commit",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "author": {
     "email": "kadir@kadirgun.com",
     "name": "Kadir Gün",
